@@ -18,6 +18,7 @@ This report is produced as part of the requirements of the 2nd Peer Assessment i
 Prior to data processing, it is identified that this study will require the use of the following packages:
 1. `dplyr`
 2. `data.table`
+3. `lubridate`
 
 Without assuming that the user has installed the required packages, the following code will check for, install and load the aforementioned packages. This will be the method used for loading packages later in this report as well.
 ```{r datapacks, results='hide'}
@@ -30,14 +31,20 @@ if (!require("data.table")){
     install.packages("data.table")
 }
 suppressMessages(require("data.table"))
+
+if (!require("lubridate")){
+    install.packages("lubridate")
+}
+suppressMessages(require("lubridate"))
 ```
 
 To begin the data processing process, the required file needs to be first downloaded from the given URL and then loaded into R. The working directory is first set to be same as the report for the bz2 zip file to be downloaded into.
-```{r downandread}
+```{r downandread, cache=TRUE}
 setwd("./")
 
 fileURL <- "http://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
-download.file(fileURL, "./Data/repdata-data-StormData.bz2")
+filePath <- "./repdata-data-StormData.csv.bz2"
+download.file(fileURL, filePath)
 
-
+rawdata <- data.table(read.csv(bzfile(filePath), stringsAsFactors = F))
 ```
