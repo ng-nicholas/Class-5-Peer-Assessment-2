@@ -1,0 +1,43 @@
+---
+title: "Class 5 - Peer Assessment 2: Analysis of Effects of Severe Weather Events"
+author: "Nicholas Ng"
+date: "Friday, January 23, 2015"
+output: html_document
+---
+
+```{r globaloptions, echo=FALSE}
+opts_chunk$set(cache = T)
+```
+
+# Abstract
+This report is produced as part of the requirements of the 2nd Peer Assessment in the Reproducible Research class of the Data Science Specialisation. Based on the data obtained from the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database, this report identifies the types of weather events that have the greatest effect on:
+1. Human health, and
+2. Economic damage
+
+# Data Processing
+Prior to data processing, it is identified that this study will require the use of the following packages:
+1. `dplyr`
+2. `data.table`
+
+Without assuming that the user has installed the required packages, the following code will check for, install and load the aforementioned packages. This will be the method used for loading packages later in this report as well.
+```{r datapacks, results='hide'}
+if (!require("dplyr")){
+    install.packages("dplyr")
+}
+suppressMessages(require("dplyr"))
+
+if (!require("data.table")){
+    install.packages("data.table")
+}
+suppressMessages(require("data.table"))
+```
+
+To begin the data processing process, the required file needs to be first downloaded from the given URL and then loaded into R. The working directory is first set to be same as the report for the bz2 zip file to be downloaded into.
+```{r downandread}
+setwd("./")
+
+fileURL <- "http://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
+download.file(fileURL, "./Data/repdata-data-StormData.bz2")
+
+
+```
