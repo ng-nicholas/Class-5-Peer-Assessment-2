@@ -10,79 +10,99 @@ if (!require("data.table")){
     require("data.table")
 }
 
-if (!require("lubridate")){
-    install.packages("lubridate")
-    require("lubridate")
+if (!require("reshape2")){
+    install.packages("data.table")
+    require("data.table")
 }
 
-# Stores the directory where this script is located.
-# Only works when script is saved.
-# initial.options <- commandArgs(trailingOnly = FALSE)
-# file.arg.name <- "--file="
-# script.name <- sub(file.arg.name, "", initial.options[grep(file.arg.name,
-#                                                            initial.options)])
-# script.basename <- dirname(script.name)
-script.dir <- paste0(dirname(sys.frame(1)$ofile), "/")
-
-# Set working directory for an organised working environment.
-setwd(script.dir)
-
-# Checks if the data file has been downloaded before. Else, downloads the file.
-data.path <- "./repdata-data-StormData.csv.bz2"
-if (length(list.files(, pattern = "repdata-data-StormData.csv.bz2",
-                      recursive = T)) == 0) {
-    data.url <- "http://d396qusza40orc.cloudfront.net/
-                repdata%2Fdata%2FStormData.csv.bz2"
-    download.file(data.url, data.path)
-}
-
-# Checks if the data has been read into the environment, else reads the file.
+# Checks if the data has been read into the environment, if not it checks if the
+# file is present for reading. If not present, it downloads the file.
 if (!exists("data.raw")) {
+    # Finds directory of this script. Works only when script is saved.
+    script.dir <- paste0(dirname(sys.frame(1)$ofile), "/")
+
+    # Set working directory for an organised working environment.
+    setwd(script.dir)
+
+    # Checks if the data file has been downloaded before. Else, downloads the file.
+    data.path <- "./repdata-data-StormData.csv.bz2"
+    if (length(list.files(, pattern = "repdata-data-StormData.csv.bz2",
+                          recursive = T)) == 0) {
+        data.url <- "http://d396qusza40orc.cloudfront.net/
+                repdata%2Fdata%2FStormData.csv.bz2"
+        download.file(data.url, data.path)
+    }
+
+    # Reads data into environment.
     data.raw <- data.table(read.csv(bzfile(data.path), stringsAsFactors = F))
 }
 
 # Creates a copy of the data to keep original raw data as a backup
 data.copy <- data.raw
 
-# Cleaning up the EVTYPE column. Has bad mix of spaces and capitalisation.
+print("Cleaning up the EVTYPE column. Has bad mix of spaces and capitalisation.")
 data.copy$EVTYPE <- toupper(data.copy$EVTYPE)
-data.copy$EVTYPE <- gsub("\\s\\s | \\-*", "\\s", data.copy$EVTYPE)
-data.copy$EVTYPE <- gsub("^\\s | \\-$", "", data.copy$EVTYPE)
+data.copy$EVTYPE <- gsub("[[:punct:]]|[[:space:]]", " ", data.copy$EVTYPE)
+data.copy$EVTYPE <- gsub("^[[:space:]]|[[:space:]]$", "", data.copy$EVTYPE)
 
-# Multiplying property and crop damage based on the exponent provided
-i <- 1
-for (i in 1:nrow(data.copy)) {
-    if (data.copy$PROPDMGEXP[[i]] == "K") {
-        data.copy$PROPDMG[[i]] <- data.copy$PROPDMG[[i]] * 1000
-    } else if (data.copy$PROPDMGEXP[[i]] == "M") {
-        data.copy$PROPDMG[[i]] <- data.copy$PROPDMG[[i]] * 1000000
-    } else if (data.copy$PROPDMGEXP[[i]] == "B") {
-        data.copy$PROPDMG[[i]] <- data.copy$PROPDMG[[i]] * 1000000000
-    }
+print("Cleaning up the exponent columns.")
+# Changes everything to upper case and removes irrelevant exponents.
+data.copy$PROPDMGEXP <- toupper(data.copy$PROPDMGEXP)
+data.copy$CROPDMGEXP <- toupper(data.copy$CROPDMGEXP)
+data.copy$PROPDMGEXP <- gsub("[[:digit:]]|[[:punct:]]", "",
+                             data.copy$PROPDMGEXP)
+data.copy$CROPDMGEXP <- gsub("[[:digit:]]|[[:punct:]]", "",
+                             data.copy$CROPDMGEXP)
 
-    if (data.copy$CROPDMGEXP[[i]] == "K") {
-        data.copy$CROPDMG[[i]] <- data.copy$CROPDMG[[i]] * 1000
-    } else if (data.copy$CROPDMGEXP[[i]] == "M") {
-        data.copy$CROPDMG[[i]] <- data.copy$CROPDMG[[i]] * 1000000
-    } else if (data.copy$CROPDMGEXP[[i]] == "B") {
-        data.copy$CROPDMG[[i]] <- data.copy$CROPDMG[[i]] * 1000000000
-    }
-}
+# Switching exponents to numbers for easier mutation
+data.copy$PROPDMGEXP <- gsub("^$", 0, data.copy$PROPDMGEXP)
+data.copy$PROPDMGEXP <- gsub("H", 100, data.copy$PROPDMGEXP)
+data.copy$PROPDMGEXP <- gsub("K", 1000, data.copy$PROPDMGEXP)
+data.copy$PROPDMGEXP <- gsub("M", 1000000, data.copy$PROPDMGEXP)
+data.copy$PROPDMGEXP <- gsub("B", 1000000000, data.copy$PROPDMGEXP)
 
-# Combining property and crop damage into a single estimate of economic damage
-data.copy <- mutate(data.copy, econdmg = sum(PROPDMG, CROPDMG))
+data.copy$CROPDMGEXP <- gsub("^$", 0, data.copy$CROPDMGEXP)
+data.copy$CROPDMGEXP <- gsub("H", 100, data.copy$CROPDMGEXP)
+data.copy$CROPDMGEXP <- gsub("K", 1000, data.copy$CROPDMGEXP)
+data.copy$CROPDMGEXP <- gsub("M", 1000000, data.copy$CROPDMGEXP)
+data.copy$CROPDMGEXP <- gsub("B", 1000000000, data.copy$CROPDMGEXP)
 
-# Summarising data for health/economic damage by event type
+# Coercion to numeric
+data.copy$PROPDMGEXP <- as.numeric(data.copy$PROPDMGEXP)
+data.copy$CROPDMGEXP <- as.numeric(data.copy$CROPDMGEXP)
+
+print("Mutating a new variables to provide a single measure of economic damage.")
+# Subsequently grouping by type of event and summarising
+# the data for the average health/economic damage by event type. The deaths and
+# injuries variables are kept for more in-depth analysis, but mutated to have a
+# total measure as well.
 data.damage <- data.copy %>%
+                mutate(pdmg = PROPDMG * PROPDMGEXP,
+                       cdmg = CROPDMG * CROPDMGEXP) %>%
                 group_by(EVTYPE) %>%
                 summarise(deaths = round(mean(FATALITIES)),
                           injuries = round(mean(INJURIES)),
-                          economic = round(mean(econdmg)))
+                          pdmg = mean(pdmg),
+                          cdmg = mean(cdmg)) %>%
+                mutate(human = deaths + injuries,
+                       econ = pdmg + cdmg)
+
+# Reshaping damage table into other tables for easier use with ggplot2
+data.human <- melt(data.damage, id = "EVTYPE",
+                   measure = c("deaths", "injuries"), variable.name = "htype",
+                   value.name = "amount")
+
+data.econ <- melt(data.damage, id = "EVTYPE",
+                   measure = c("pdmg", "cdmg"), variable.name = "etype",
+                   value.name = "amount")
 
 ## Results
 # Loading ggplot2
 if (!require("ggplot2")){
     install.packages("ggplot2")
+    require("ggplot2")
 }
-suppressMessages(require("ggplot2"))
 
+# # Plotting the human damage by event
+# graph.human <- ggplot(data.damage, aes(x = EVTYPE, y = human)) +
+#                 geom_bar(stat)
