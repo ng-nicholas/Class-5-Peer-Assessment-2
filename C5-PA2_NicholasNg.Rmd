@@ -16,7 +16,7 @@ This report is produced as part of the requirements of the 2nd Peer Assessment i
 
 # Data Processing
 Before any transformations can be done on the data, the required data processing packages need to be loaded.
-```{r datapacks}
+```{r datapacks, echo=FALSE}
 if (!require("dplyr")){
     install.packages("dplyr")
     require("dplyr")
@@ -61,7 +61,7 @@ data.copy <- data.raw
 ```
 
 ## Processing of Event Types
-As observed, the items in the `EVTYPE` column are messy and contain many errors that were likely to have been introduced by human error during data input. This column should be cleaned to match the U.S. National Oceanic and Atmospheric Administration (NOAA) official 48 event types, as stated in their "NATIONAL WEATHER SERVICE INSTRUCTION 10-1605" document dated 17th August 2007.
+As observed, the event descriptions in the `EVTYPE` column are messy and contain many errors that were likely to have been introduced by human error during data input. This column should be cleaned to match the U.S. National Oceanic and Atmospheric Administration (NOAA) official 48 event types, as stated in their "NATIONAL WEATHER SERVICE INSTRUCTION 10-1605" document dated 17th August 2007.
 
 The cleaning procedure as used was recommended by David Hood, community TA in the Peer Assessment 2 discussion forums of the Reproducible Research class on Coursera.
 
@@ -71,10 +71,10 @@ data.copy$EVTYPE <- tolower(data.copy$EVTYPE)
 data.copy$EVTYPE <- gsub("[[:space:]]*|[[:punct:]]*", "", data.copy$EVTYPE)
 ```
 
-Unfortunately, there is no programmatic solution to replacing the messy event types in the raw data with the official 48 types. Therefore, the user will have to replace the raw data with the official type using a series of regular expression to subset and replace in a separate column. That column is first initialised as seen in the first line.
+Unfortunately, there is no encompassing, programmatic solution to replacing the messy event types in the raw data with the official 48 types. Therefore, the user will have to replace the raw data with the official type using a series of regular expression to subset and replace in a separate column. That column is first initialised as seen in the first line.
 
 It should be acknowledged here that the order of the subsetting and the regular expressions used play a big part in the sorting of entries into the pigeonholes of the official event types. The process is heavily dependent on the intuition of the user and could be better fine-tuned with more time and discussion of the individual raw event descriptions.
-```{r eventrplc}
+```{r eventsub}
 data.copy$cleanev <- ""
 data.copy$cleanev[grep("astronomical", data.copy$EVTYPE)] <-
     "Astronomical Low Tide Z"
@@ -178,15 +178,18 @@ data.copy$cleanev[grep("^$|^[[:space:]]$", data.copy$cleanev)] <- "Other"
 ## Processing of Damage Measures
 The 2nd major process in the data processing workflow is to enable the proper quantification of economic damage caused by each event. The raw data had listed the amount of damage caused by each event separately based on damage to property or agricultural products in `PROPDMG` and `CROPDMG`, with factors listed in `PROPDMGEXP` and `CROPDMGEXP`.
 
-To obtain the correct amount of damage numerically, the amounts in the numerical columns (`PROPDMG`, `CROPDMG`) should be multiplied against the factors as represented by the character columns (`PROPDMGEXP`, `CROPDMGEXP`). This was as understood from the instructions document, together with the representation of 
+To obtain the correct amount of damage numerically, the amounts in the numerical columns (`PROPDMG`, `CROPDMG`) should be multiplied against the factors as represented by the character columns (`PROPDMGEXP`, `CROPDMGEXP`). This was as understood from the instructions document, together with representation of the letters. However, since the latter 2 columns contained a mix of alphanumeric characters in mixed case, this needed to be cleaned prior to any further transformation. Here, all characters were coerced into upper case and digits as well as punctuation was stripped out.
+```{r squashexp}
 data.copy$PROPDMGEXP <- toupper(data.copy$PROPDMGEXP)
 data.copy$CROPDMGEXP <- toupper(data.copy$CROPDMGEXP)
 data.copy$PROPDMGEXP <- gsub("[[:digit:]]|[[:punct:]]", "",
                              data.copy$PROPDMGEXP)
 data.copy$CROPDMGEXP <- gsub("[[:digit:]]|[[:punct:]]", "",
                              data.copy$CROPDMGEXP)
+```
 
 # Switching exponents to numbers for easier mutation
+```{r expsub}
 data.copy$PROPDMGEXP <- gsub("^$", 0, data.copy$PROPDMGEXP)
 data.copy$PROPDMGEXP <- gsub("H", 100, data.copy$PROPDMGEXP)
 data.copy$PROPDMGEXP <- gsub("K", 1000, data.copy$PROPDMGEXP)
@@ -199,15 +202,11 @@ data.copy$CROPDMGEXP <- gsub("K", 1000, data.copy$CROPDMGEXP)
 data.copy$CROPDMGEXP <- gsub("M", 1000000, data.copy$CROPDMGEXP)
 data.copy$CROPDMGEXP <- gsub("B", 1000000000, data.copy$CROPDMGEXP)
 
-# Coercion to numeric
 data.copy$PROPDMGEXP <- as.numeric(data.copy$PROPDMGEXP)
 data.copy$CROPDMGEXP <- as.numeric(data.copy$CROPDMGEXP)
+```
 
-print("Mutating a new variables to provide a single measure of economic damage.")
-# Subsequently grouping by type of event and summarising
-# the data for the average health/economic damage by event type. The deaths and
-# injuries variables are kept for more in-depth analysis, but mutated to have a
-# total measure as well.
+```{r summary}
 data.damage <- data.copy %>%
                 mutate(pdmg = PROPDMG * PROPDMGEXP,
                        cdmg = CROPDMG * CROPDMGEXP) %>%
@@ -218,16 +217,15 @@ data.damage <- data.copy %>%
                           cdmg = mean(cdmg)) %>%
                 mutate(human = deaths + injuries,
                        econ = pdmg + cdmg)
+```
 
-# Grabbing the top 10 human health/econ damage event types and storing them
-# in the relevant tables
+```{r rankset}
 data.tophuman <- data.damage$cleanev[order(data.damage$human, decreasing=T)]
 data.human <- subset(data.damage, cleanev %in% data.tophuman[1:10])
 
 data.topecon <- data.damage$cleanev[order(data.damage$econ, decreasing=T)]
 data.econ <- subset(data.damage, cleanev %in% data.topecon[1:10])
 
-# Reshaping damage table into other tables for easier use with ggplot2
 data.human <- melt(data.human, id = "cleanev",
                    measure = c("deaths", "injuries"), variable.name = "htype",
                    value.name = "amount")
@@ -239,9 +237,10 @@ data.econ <- melt(data.econ, id = "cleanev",
                    value.name = "amount")
 data.econ$etype <- gsub("pdmg", "Property", data.econ$etype)
 data.econ$etype <- gsub("cdmg", "Crop", data.econ$etype)
+```
 
-## Results
-# Loading ggplot2
+# Results
+```{r plotpacks, echo=FALSE}
 if (!require("ggplot2")){
     install.packages("ggplot2")
     require("ggplot2")
@@ -250,6 +249,7 @@ if (!require("scales")){
     install.packages("scales")
     require("scales")
 }
+```
 
 # Plotting the human damage by event
 graph.human <- ggplot(data.human, aes(x = cleanev, y = amount, fill = htype)) +
@@ -259,6 +259,7 @@ graph.human <- ggplot(data.human, aes(x = cleanev, y = amount, fill = htype)) +
                      y = "Number of Deaths/Injuries",
                      fill = "Categories") +
                 scale_y_continuous(labels = comma)
+print(graph.human)
 
 graph.econ <- ggplot(data.econ, aes(x = cleanev, y = amount, fill = etype)) +
                 geom_bar(stat = "identity") +
@@ -267,3 +268,4 @@ graph.econ <- ggplot(data.econ, aes(x = cleanev, y = amount, fill = etype)) +
                      y = "Cost of Damage (USD)",
                      fill = "Type of Damage") +
                 scale_y_continuous(labels = comma)
+print(graph.econ)

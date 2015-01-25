@@ -227,6 +227,7 @@ graph.human <- ggplot(data.human, aes(x = cleanev, y = amount, fill = htype)) +
                      y = "Number of Deaths/Injuries",
                      fill = "Categories") +
                 scale_y_continuous(labels = comma)
+print(graph.human)
 
 graph.econ <- ggplot(data.econ, aes(x = cleanev, y = amount, fill = etype)) +
                 geom_bar(stat = "identity") +
@@ -235,3 +236,4 @@ graph.econ <- ggplot(data.econ, aes(x = cleanev, y = amount, fill = etype)) +
                      y = "Cost of Damage (USD)",
                      fill = "Type of Damage") +
                 scale_y_continuous(labels = comma)
+print(graph.econ)
