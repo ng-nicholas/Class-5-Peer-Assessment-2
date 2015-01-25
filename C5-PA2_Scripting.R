@@ -40,10 +40,110 @@ if (!exists("data.raw")) {
 # Creates a copy of the data to keep original raw data as a backup
 data.copy <- data.raw
 
-print("Cleaning up the EVTYPE column. Has bad mix of spaces and capitalisation.")
-data.copy$EVTYPE <- toupper(data.copy$EVTYPE)
-data.copy$EVTYPE <- gsub("[[:punct:]]|[[:space:]]", " ", data.copy$EVTYPE)
-data.copy$EVTYPE <- gsub("^[[:space:]]|[[:space:]]$", "", data.copy$EVTYPE)
+print("Cleaning up the EVTYPE column.")
+# Using subsetting rules with regexs to sort events into official 48 types.
+# According to solution proposed by community TA David Hood.
+data.copy$EVTYPE <- tolower(data.copy$EVTYPE)
+data.copy$EVTYPE <- gsub("[[:space:]]*|[[:punct:]]*", "", data.copy$EVTYPE)
+data.copy$cleanev <- ""
+
+data.copy$cleanev[grep("astronomical", data.copy$EVTYPE)] <-
+    "Astronomical Low Tide Z"
+data.copy$cleanev[grep("avalan", data.copy$EVTYPE)] <-
+    "Avalanche Z"
+data.copy$cleanev[grep("blizz", data.copy$EVTYPE)] <-
+    "Blizzard Z"
+data.copy$cleanev[grep("coast", data.copy$EVTYPE)] <-
+    "Coastal Flood Z"
+data.copy$cleanev[grep("w(i)?nd", data.copy$EVTYPE)] <-
+    "High Wind Z"
+data.copy$cleanev[grep("^cold|^cool", data.copy$EVTYPE)] <-
+    "Cold/Wind Chill Z"
+data.copy$cleanev[grep("debris", data.copy$EVTYPE)] <-
+    "Debris Flow C"
+data.copy$cleanev[grep("fog", data.copy$EVTYPE)] <-
+    "Dense Fog Z"
+data.copy$cleanev[grep("smoke", data.copy$EVTYPE)] <-
+    "Dense Smoke Z"
+data.copy$cleanev[grep("drought", data.copy$EVTYPE)] <-
+    "Drought Z"
+data.copy$cleanev[grep("dustd", data.copy$EVTYPE)] <-
+    "Dust Devil C"
+data.copy$cleanev[grep("dustst", data.copy$EVTYPE)] <-
+    "Dust Storm Z"
+data.copy$cleanev[grep("heat", data.copy$EVTYPE)] <-
+    "Heat Z"
+data.copy$cleanev[grep("excessiveheat|extremeh", data.copy$EVTYPE)] <-
+    "Excessive Heat Z"
+data.copy$cleanev[grep("extremec|extremer|extremew", data.copy$EVTYPE)] <-
+    "Extreme Cold/Wind Chill Z"
+data.copy$cleanev[grep("flash", data.copy$EVTYPE)] <-
+    "Flash Flood C"
+data.copy$cleanev[grep("^flood", data.copy$EVTYPE)] <-
+    "Flood C"
+data.copy$cleanev[grep("frost|freez", data.copy$EVTYPE)] <-
+    "Frost/Freeze Z"
+data.copy$cleanev[grep("funnel", data.copy$EVTYPE)] <-
+    "Funnel Cloud C"
+data.copy$cleanev[grep("freezingfog", data.copy$EVTYPE)] <-
+    "Freezing Fog Z"
+data.copy$cleanev[grep("hail", data.copy$EVTYPE)] <-
+    "Hail C"
+data.copy$cleanev[grep("rain|tstm", data.copy$EVTYPE)] <-
+    "Heavy Rain C"
+data.copy$cleanev[grep("snow", data.copy$EVTYPE)] <-
+    "Heavy Snow Z"
+data.copy$cleanev[grep("surf", data.copy$EVTYPE)] <-
+    "High Surf Z"
+data.copy$cleanev[grep("hurricane|typhoon", data.copy$EVTYPE)] <-
+    "Hurricane (Typhoon) Z"
+data.copy$cleanev[grep("icestorm", data.copy$EVTYPE)] <-
+    "Ice Storm Z"
+data.copy$cleanev[grep("lakeeffectsnow", data.copy$EVTYPE)] <-
+    "Lake-Effect Snow Z"
+data.copy$cleanev[grep("lake(shore)?flood", data.copy$EVTYPE)] <-
+    "Lakeshore Flood Z"
+data.copy$cleanev[grep("lightning", data.copy$EVTYPE)] <-
+    "Lightning C"
+data.copy$cleanev[grep("marinehail", data.copy$EVTYPE)] <-
+    "Marine Hail M"
+data.copy$cleanev[grep("marinehighwind", data.copy$EVTYPE)] <-
+    "Marine High Wind M"
+data.copy$cleanev[grep("marinestormwind", data.copy$EVTYPE)] <-
+    "Marine Strong Wind M"
+data.copy$cleanev[grep("marinethunderstormwind|marinetstmwind",
+                       data.copy$EVTYPE)] <- "Marine Thunderstorm Wind M"
+data.copy$cleanev[grep("ripcurrent", data.copy$EVTYPE)] <-
+    "Rip Current Z"
+data.copy$cleanev[grep("seiche", data.copy$EVTYPE)] <-
+    "Seiche Z"
+data.copy$cleanev[grep("sleet", data.copy$EVTYPE)] <-
+    "Sleet Z"
+data.copy$cleanev[grep("stormsurge", data.copy$EVTYPE)] <-
+    "Storm Surge/Tide Z"
+data.copy$cleanev[grep("strongwind", data.copy$EVTYPE)] <-
+    "Strong Wind Z"
+data.copy$cleanev[grep("storm(.*)?wind|tstmw", data.copy$EVTYPE)] <-
+    "Thunderstorm Wind C"
+data.copy$cleanev[grep("tornado", data.copy$EVTYPE)] <-
+    "Tornado C"
+data.copy$cleanev[grep("tropicaldepression", data.copy$EVTYPE)] <-
+    "Tropical Depression Z"
+data.copy$cleanev[grep("tropicalstorm", data.copy$EVTYPE)] <-
+    "Tropical Storm Z"
+data.copy$cleanev[grep("tsunami", data.copy$EVTYPE)] <-
+    "Tsunami Z"
+data.copy$cleanev[grep("volcanic", data.copy$EVTYPE)] <-
+    "Volcanic Ash Z"
+data.copy$cleanev[grep("wa.erspout", data.copy$EVTYPE)] <-
+    "Waterspout M"
+data.copy$cleanev[grep("wild(.*)?fire", data.copy$EVTYPE)] <-
+    "Wildfire Z"
+data.copy$cleanev[grep("wint", data.copy$EVTYPE)] <-
+    "Winter Weather Z"
+data.copy$cleanev[grep("winterst", data.copy$EVTYPE)] <-
+    "Winter Storm Z"
+data.copy$cleanev[grep("^$|^[[:space:]]$", data.copy$cleanev)] <- "Other"
 
 print("Cleaning up the exponent columns.")
 # Changes everything to upper case and removes irrelevant exponents.
@@ -79,7 +179,7 @@ print("Mutating a new variables to provide a single measure of economic damage."
 data.damage <- data.copy %>%
                 mutate(pdmg = PROPDMG * PROPDMGEXP,
                        cdmg = CROPDMG * CROPDMGEXP) %>%
-                group_by(EVTYPE) %>%
+                group_by(cleanev) %>%
                 summarise(deaths = round(mean(FATALITIES)),
                           injuries = round(mean(INJURIES)),
                           pdmg = mean(pdmg),
@@ -87,14 +187,26 @@ data.damage <- data.copy %>%
                 mutate(human = deaths + injuries,
                        econ = pdmg + cdmg)
 
+# Grabbing the top 10 human health/econ damage event types and storing them
+# in the relevant tables
+data.tophuman <- data.damage$cleanev[order(data.damage$human, decreasing=T)]
+data.human <- subset(data.damage, cleanev %in% data.tophuman[1:10])
+
+data.topecon <- data.damage$cleanev[order(data.damage$econ, decreasing=T)]
+data.econ <- subset(data.damage, cleanev %in% data.topecon[1:10])
+
 # Reshaping damage table into other tables for easier use with ggplot2
-data.human <- melt(data.damage, id = "EVTYPE",
+data.human <- melt(data.human, id = "cleanev",
                    measure = c("deaths", "injuries"), variable.name = "htype",
                    value.name = "amount")
+data.human$htype <- gsub("deaths", "Deaths", data.human$htype)
+data.human$htype <- gsub("injuries", "Injuries", data.human$htype)
 
-data.econ <- melt(data.damage, id = "EVTYPE",
+data.econ <- melt(data.econ, id = "cleanev",
                    measure = c("pdmg", "cdmg"), variable.name = "etype",
                    value.name = "amount")
+data.econ$etype <- gsub("pdmg", "Property", data.econ$etype)
+data.econ$etype <- gsub("cdmg", "Crop", data.econ$etype)
 
 ## Results
 # Loading ggplot2
@@ -102,7 +214,24 @@ if (!require("ggplot2")){
     install.packages("ggplot2")
     require("ggplot2")
 }
+if (!require("scales")){
+    install.packages("scales")
+    require("scales")
+}
 
-# # Plotting the human damage by event
-# graph.human <- ggplot(data.damage, aes(x = EVTYPE, y = human)) +
-#                 geom_bar(stat)
+# Plotting the human damage by event
+graph.human <- ggplot(data.human, aes(x = cleanev, y = amount, fill = htype)) +
+                geom_bar(stat = "identity") +
+                labs(title = "Average Deaths/Injuries by Event Type",
+                     x = "Event Type",
+                     y = "Number of Deaths/Injuries",
+                     fill = "Categories") +
+                scale_y_continuous(labels = comma)
+
+graph.econ <- ggplot(data.econ, aes(x = cleanev, y = amount, fill = etype)) +
+                geom_bar(stat = "identity") +
+                labs(title = "Average Economic Damage by Event Type",
+                     x = "Event Type",
+                     y = "Cost of Damage (USD)",
+                     fill = "Type of Damage") +
+                scale_y_continuous(labels = comma)
