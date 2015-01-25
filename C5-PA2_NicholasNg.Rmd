@@ -15,36 +15,255 @@ This report is produced as part of the requirements of the 2nd Peer Assessment i
 2. Economic damage
 
 # Data Processing
-Prior to data processing, it is identified that this study will require the use of the following packages:
-1. `dplyr`
-2. `data.table`
-3. `lubridate`
-
-Without assuming that the user has installed the required packages, the following code will check for, install and load the aforementioned packages. This will be the method used for loading packages later in this report as well.
-```{r datapacks, results='hide'}
+Before any transformations can be done on the data, the required data processing packages need to be loaded.
+```{r datapacks}
 if (!require("dplyr")){
     install.packages("dplyr")
+    require("dplyr")
 }
-suppressMessages(require("dplyr"))
 
 if (!require("data.table")){
     install.packages("data.table")
+    require("data.table")
 }
-suppressMessages(require("data.table"))
 
-if (!require("lubridate")){
-    install.packages("lubridate")
+if (!require("reshape2")){
+    install.packages("data.table")
+    require("data.table")
 }
-suppressMessages(require("lubridate"))
 ```
 
-To begin the data processing process, the required file needs to be first downloaded from the given URL and then loaded into R. The working directory is first set to be same as the report for the bz2 zip file to be downloaded into.
-```{r downandread, cache=TRUE}
-setwd("./")
+As the downloading and reading of the data will take time due to the amount of data, a caching method is used. The code checks if the data has been loaded in the local environment and if the data file has been downloaded. Only if the file has not been downloaded or read into R is the relevant operation executed.
 
-fileURL <- "http://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
-filePath <- "./repdata-data-StormData.csv.bz2"
-download.file(fileURL, filePath)
+Special note should be taken of the first 2 lines of the `if` loop, which checks for the directory of the script and sets it as the working directory.
+```{r cacheload}
+if (!exists("data.raw")) {
+    
+    script.dir <- paste0(dirname(sys.frame(1)$ofile), "/")
 
-rawdata <- data.table(read.csv(bzfile(filePath), stringsAsFactors = F))
+    setwd(script.dir)
+
+    data.path <- "./repdata-data-StormData.csv.bz2"
+    if (length(list.files(, pattern = "repdata-data-StormData.csv.bz2",
+                          recursive = T)) == 0) {
+        data.url <- "http://d396qusza40orc.cloudfront.net/
+                repdata%2Fdata%2FStormData.csv.bz2"
+        download.file(data.url, data.path)
+    }
+
+    data.raw <- data.table(read.csv(bzfile(data.path), stringsAsFactors = F))
+}
 ```
+
+To preserve the original data for backup purposes, a copy of the data is made. Transformations of data are executed on this copy.
+```{r backup}
+data.copy <- data.raw
+```
+
+## Processing of Event Types
+As observed, the items in the `EVTYPE` column are messy and contain many errors that were likely to have been introduced by human error during data input. This column should be cleaned to match the U.S. National Oceanic and Atmospheric Administration (NOAA) official 48 event types, as stated in their "NATIONAL WEATHER SERVICE INSTRUCTION 10-1605" document dated 17th August 2007.
+
+The cleaning procedure as used was recommended by David Hood, community TA in the Peer Assessment 2 discussion forums of the Reproducible Research class on Coursera.
+
+Firstly, the text is "squashed", changing all alphabetic characters to lower case and stripping out any spaces as well as punctuation. This process will make it easier for sorting each item into the official 48 event types.
+```{r squashtypes}
+data.copy$EVTYPE <- tolower(data.copy$EVTYPE)
+data.copy$EVTYPE <- gsub("[[:space:]]*|[[:punct:]]*", "", data.copy$EVTYPE)
+```
+
+Unfortunately, there is no programmatic solution to replacing the messy event types in the raw data with the official 48 types. Therefore, the user will have to replace the raw data with the official type using a series of regular expression to subset and replace in a separate column. That column is first initialised as seen in the first line.
+
+It should be acknowledged here that the order of the subsetting and the regular expressions used play a big part in the sorting of entries into the pigeonholes of the official event types. The process is heavily dependent on the intuition of the user and could be better fine-tuned with more time and discussion of the individual raw event descriptions.
+```{r eventrplc}
+data.copy$cleanev <- ""
+data.copy$cleanev[grep("astronomical", data.copy$EVTYPE)] <-
+    "Astronomical Low Tide Z"
+data.copy$cleanev[grep("avalan", data.copy$EVTYPE)] <-
+    "Avalanche Z"
+data.copy$cleanev[grep("blizz", data.copy$EVTYPE)] <-
+    "Blizzard Z"
+data.copy$cleanev[grep("coast", data.copy$EVTYPE)] <-
+    "Coastal Flood Z"
+data.copy$cleanev[grep("w(i)?nd", data.copy$EVTYPE)] <-
+    "High Wind Z"
+data.copy$cleanev[grep("^cold|^cool", data.copy$EVTYPE)] <-
+    "Cold/Wind Chill Z"
+data.copy$cleanev[grep("debris", data.copy$EVTYPE)] <-
+    "Debris Flow C"
+data.copy$cleanev[grep("fog", data.copy$EVTYPE)] <-
+    "Dense Fog Z"
+data.copy$cleanev[grep("smoke", data.copy$EVTYPE)] <-
+    "Dense Smoke Z"
+data.copy$cleanev[grep("drought", data.copy$EVTYPE)] <-
+    "Drought Z"
+data.copy$cleanev[grep("dustd", data.copy$EVTYPE)] <-
+    "Dust Devil C"
+data.copy$cleanev[grep("dustst", data.copy$EVTYPE)] <-
+    "Dust Storm Z"
+data.copy$cleanev[grep("heat", data.copy$EVTYPE)] <-
+    "Heat Z"
+data.copy$cleanev[grep("excessiveheat|extremeh", data.copy$EVTYPE)] <-
+    "Excessive Heat Z"
+data.copy$cleanev[grep("extremec|extremer|extremew", data.copy$EVTYPE)] <-
+    "Extreme Cold/Wind Chill Z"
+data.copy$cleanev[grep("flash", data.copy$EVTYPE)] <-
+    "Flash Flood C"
+data.copy$cleanev[grep("^flood", data.copy$EVTYPE)] <-
+    "Flood C"
+data.copy$cleanev[grep("frost|freez", data.copy$EVTYPE)] <-
+    "Frost/Freeze Z"
+data.copy$cleanev[grep("funnel", data.copy$EVTYPE)] <-
+    "Funnel Cloud C"
+data.copy$cleanev[grep("freezingfog", data.copy$EVTYPE)] <-
+    "Freezing Fog Z"
+data.copy$cleanev[grep("hail", data.copy$EVTYPE)] <-
+    "Hail C"
+data.copy$cleanev[grep("rain|tstm", data.copy$EVTYPE)] <-
+    "Heavy Rain C"
+data.copy$cleanev[grep("snow", data.copy$EVTYPE)] <-
+    "Heavy Snow Z"
+data.copy$cleanev[grep("surf", data.copy$EVTYPE)] <-
+    "High Surf Z"
+data.copy$cleanev[grep("hurricane|typhoon", data.copy$EVTYPE)] <-
+    "Hurricane (Typhoon) Z"
+data.copy$cleanev[grep("icestorm", data.copy$EVTYPE)] <-
+    "Ice Storm Z"
+data.copy$cleanev[grep("lakeeffectsnow", data.copy$EVTYPE)] <-
+    "Lake-Effect Snow Z"
+data.copy$cleanev[grep("lake(shore)?flood", data.copy$EVTYPE)] <-
+    "Lakeshore Flood Z"
+data.copy$cleanev[grep("lightning", data.copy$EVTYPE)] <-
+    "Lightning C"
+data.copy$cleanev[grep("marinehail", data.copy$EVTYPE)] <-
+    "Marine Hail M"
+data.copy$cleanev[grep("marinehighwind", data.copy$EVTYPE)] <-
+    "Marine High Wind M"
+data.copy$cleanev[grep("marinestormwind", data.copy$EVTYPE)] <-
+    "Marine Strong Wind M"
+data.copy$cleanev[grep("marinethunderstormwind|marinetstmwind",
+                       data.copy$EVTYPE)] <- "Marine Thunderstorm Wind M"
+data.copy$cleanev[grep("ripcurrent", data.copy$EVTYPE)] <-
+    "Rip Current Z"
+data.copy$cleanev[grep("seiche", data.copy$EVTYPE)] <-
+    "Seiche Z"
+data.copy$cleanev[grep("sleet", data.copy$EVTYPE)] <-
+    "Sleet Z"
+data.copy$cleanev[grep("stormsurge", data.copy$EVTYPE)] <-
+    "Storm Surge/Tide Z"
+data.copy$cleanev[grep("strongwind", data.copy$EVTYPE)] <-
+    "Strong Wind Z"
+data.copy$cleanev[grep("storm(.*)?wind|tstmw", data.copy$EVTYPE)] <-
+    "Thunderstorm Wind C"
+data.copy$cleanev[grep("tornado", data.copy$EVTYPE)] <-
+    "Tornado C"
+data.copy$cleanev[grep("tropicaldepression", data.copy$EVTYPE)] <-
+    "Tropical Depression Z"
+data.copy$cleanev[grep("tropicalstorm", data.copy$EVTYPE)] <-
+    "Tropical Storm Z"
+data.copy$cleanev[grep("tsunami", data.copy$EVTYPE)] <-
+    "Tsunami Z"
+data.copy$cleanev[grep("volcanic", data.copy$EVTYPE)] <-
+    "Volcanic Ash Z"
+data.copy$cleanev[grep("wa.erspout", data.copy$EVTYPE)] <-
+    "Waterspout M"
+data.copy$cleanev[grep("wild(.*)?fire", data.copy$EVTYPE)] <-
+    "Wildfire Z"
+data.copy$cleanev[grep("wint", data.copy$EVTYPE)] <-
+    "Winter Weather Z"
+data.copy$cleanev[grep("winterst", data.copy$EVTYPE)] <-
+    "Winter Storm Z"
+data.copy$cleanev[grep("^$|^[[:space:]]$", data.copy$cleanev)] <- "Other"
+```
+
+## Processing of Damage Measures
+The 2nd major process in the data processing workflow is to enable the proper quantification of economic damage caused by each event. The raw data had listed the amount of damage caused by each event separately based on damage to property or agricultural products in `PROPDMG` and `CROPDMG`, with factors listed in `PROPDMGEXP` and `CROPDMGEXP`.
+
+To obtain the correct amount of damage numerically, the amounts in the numerical columns (`PROPDMG`, `CROPDMG`) should be multiplied against the factors as represented by the character columns (`PROPDMGEXP`, `CROPDMGEXP`). This was as understood from the instructions document, together with the representation of 
+data.copy$PROPDMGEXP <- toupper(data.copy$PROPDMGEXP)
+data.copy$CROPDMGEXP <- toupper(data.copy$CROPDMGEXP)
+data.copy$PROPDMGEXP <- gsub("[[:digit:]]|[[:punct:]]", "",
+                             data.copy$PROPDMGEXP)
+data.copy$CROPDMGEXP <- gsub("[[:digit:]]|[[:punct:]]", "",
+                             data.copy$CROPDMGEXP)
+
+# Switching exponents to numbers for easier mutation
+data.copy$PROPDMGEXP <- gsub("^$", 0, data.copy$PROPDMGEXP)
+data.copy$PROPDMGEXP <- gsub("H", 100, data.copy$PROPDMGEXP)
+data.copy$PROPDMGEXP <- gsub("K", 1000, data.copy$PROPDMGEXP)
+data.copy$PROPDMGEXP <- gsub("M", 1000000, data.copy$PROPDMGEXP)
+data.copy$PROPDMGEXP <- gsub("B", 1000000000, data.copy$PROPDMGEXP)
+
+data.copy$CROPDMGEXP <- gsub("^$", 0, data.copy$CROPDMGEXP)
+data.copy$CROPDMGEXP <- gsub("H", 100, data.copy$CROPDMGEXP)
+data.copy$CROPDMGEXP <- gsub("K", 1000, data.copy$CROPDMGEXP)
+data.copy$CROPDMGEXP <- gsub("M", 1000000, data.copy$CROPDMGEXP)
+data.copy$CROPDMGEXP <- gsub("B", 1000000000, data.copy$CROPDMGEXP)
+
+# Coercion to numeric
+data.copy$PROPDMGEXP <- as.numeric(data.copy$PROPDMGEXP)
+data.copy$CROPDMGEXP <- as.numeric(data.copy$CROPDMGEXP)
+
+print("Mutating a new variables to provide a single measure of economic damage.")
+# Subsequently grouping by type of event and summarising
+# the data for the average health/economic damage by event type. The deaths and
+# injuries variables are kept for more in-depth analysis, but mutated to have a
+# total measure as well.
+data.damage <- data.copy %>%
+                mutate(pdmg = PROPDMG * PROPDMGEXP,
+                       cdmg = CROPDMG * CROPDMGEXP) %>%
+                group_by(cleanev) %>%
+                summarise(deaths = round(mean(FATALITIES)),
+                          injuries = round(mean(INJURIES)),
+                          pdmg = mean(pdmg),
+                          cdmg = mean(cdmg)) %>%
+                mutate(human = deaths + injuries,
+                       econ = pdmg + cdmg)
+
+# Grabbing the top 10 human health/econ damage event types and storing them
+# in the relevant tables
+data.tophuman <- data.damage$cleanev[order(data.damage$human, decreasing=T)]
+data.human <- subset(data.damage, cleanev %in% data.tophuman[1:10])
+
+data.topecon <- data.damage$cleanev[order(data.damage$econ, decreasing=T)]
+data.econ <- subset(data.damage, cleanev %in% data.topecon[1:10])
+
+# Reshaping damage table into other tables for easier use with ggplot2
+data.human <- melt(data.human, id = "cleanev",
+                   measure = c("deaths", "injuries"), variable.name = "htype",
+                   value.name = "amount")
+data.human$htype <- gsub("deaths", "Deaths", data.human$htype)
+data.human$htype <- gsub("injuries", "Injuries", data.human$htype)
+
+data.econ <- melt(data.econ, id = "cleanev",
+                   measure = c("pdmg", "cdmg"), variable.name = "etype",
+                   value.name = "amount")
+data.econ$etype <- gsub("pdmg", "Property", data.econ$etype)
+data.econ$etype <- gsub("cdmg", "Crop", data.econ$etype)
+
+## Results
+# Loading ggplot2
+if (!require("ggplot2")){
+    install.packages("ggplot2")
+    require("ggplot2")
+}
+if (!require("scales")){
+    install.packages("scales")
+    require("scales")
+}
+
+# Plotting the human damage by event
+graph.human <- ggplot(data.human, aes(x = cleanev, y = amount, fill = htype)) +
+                geom_bar(stat = "identity") +
+                labs(title = "Average Deaths/Injuries by Event Type",
+                     x = "Event Type",
+                     y = "Number of Deaths/Injuries",
+                     fill = "Categories") +
+                scale_y_continuous(labels = comma)
+
+graph.econ <- ggplot(data.econ, aes(x = cleanev, y = amount, fill = etype)) +
+                geom_bar(stat = "identity") +
+                labs(title = "Average Economic Damage by Event Type",
+                     x = "Event Type",
+                     y = "Cost of Damage (USD)",
+                     fill = "Type of Damage") +
+                scale_y_continuous(labels = comma)
