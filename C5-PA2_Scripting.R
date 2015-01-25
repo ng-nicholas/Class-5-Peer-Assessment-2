@@ -155,13 +155,13 @@ data.copy$CROPDMGEXP <- gsub("[[:digit:]]|[[:punct:]]", "",
                              data.copy$CROPDMGEXP)
 
 # Switching exponents to numbers for easier mutation
-data.copy$PROPDMGEXP <- gsub("^$", 0, data.copy$PROPDMGEXP)
+data.copy$PROPDMGEXP <- gsub("^$", 1, data.copy$PROPDMGEXP)
 data.copy$PROPDMGEXP <- gsub("H", 100, data.copy$PROPDMGEXP)
 data.copy$PROPDMGEXP <- gsub("K", 1000, data.copy$PROPDMGEXP)
 data.copy$PROPDMGEXP <- gsub("M", 1000000, data.copy$PROPDMGEXP)
 data.copy$PROPDMGEXP <- gsub("B", 1000000000, data.copy$PROPDMGEXP)
 
-data.copy$CROPDMGEXP <- gsub("^$", 0, data.copy$CROPDMGEXP)
+data.copy$CROPDMGEXP <- gsub("^$", 1, data.copy$CROPDMGEXP)
 data.copy$CROPDMGEXP <- gsub("H", 100, data.copy$CROPDMGEXP)
 data.copy$CROPDMGEXP <- gsub("K", 1000, data.copy$CROPDMGEXP)
 data.copy$CROPDMGEXP <- gsub("M", 1000000, data.copy$CROPDMGEXP)

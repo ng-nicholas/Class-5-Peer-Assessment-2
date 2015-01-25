@@ -61,7 +61,7 @@ data.copy <- data.raw
 ```
 
 ## Processing of Event Types
-As observed, the event descriptions in the `EVTYPE` column are messy and contain many errors that were likely to have been introduced by human error during data input. This column should be cleaned to match the U.S. National Oceanic and Atmospheric Administration (NOAA) official 48 event types, as stated in their "NATIONAL WEATHER SERVICE INSTRUCTION 10-1605" document dated 17th August 2007.
+As observed, the event descriptions in the `EVTYPE` column are messy and contain many errors that were likely to have been introduced by human error during data input. This column should be cleaned to match the NOAA official 48 event types, as stated in their "NATIONAL WEATHER SERVICE INSTRUCTION 10-1605" document dated 17th August 2007.
 
 The cleaning procedure as used was recommended by David Hood, community TA in the Peer Assessment 2 discussion forums of the Reproducible Research class on Coursera.
 
@@ -188,15 +188,15 @@ data.copy$CROPDMGEXP <- gsub("[[:digit:]]|[[:punct:]]", "",
                              data.copy$CROPDMGEXP)
 ```
 
-# Switching exponents to numbers for easier mutation
+Once the "exponent" columns have been cleaned, the letters are substituted with the factors they represent for easier multiplication after they are coerced to numeric type. Here, it is assumed that "H" represents a factor of 100, and blanks represent a factor
 ```{r expsub}
-data.copy$PROPDMGEXP <- gsub("^$", 0, data.copy$PROPDMGEXP)
+data.copy$PROPDMGEXP <- gsub("^$", 1, data.copy$PROPDMGEXP)
 data.copy$PROPDMGEXP <- gsub("H", 100, data.copy$PROPDMGEXP)
 data.copy$PROPDMGEXP <- gsub("K", 1000, data.copy$PROPDMGEXP)
 data.copy$PROPDMGEXP <- gsub("M", 1000000, data.copy$PROPDMGEXP)
 data.copy$PROPDMGEXP <- gsub("B", 1000000000, data.copy$PROPDMGEXP)
 
-data.copy$CROPDMGEXP <- gsub("^$", 0, data.copy$CROPDMGEXP)
+data.copy$CROPDMGEXP <- gsub("^$", 1, data.copy$CROPDMGEXP)
 data.copy$CROPDMGEXP <- gsub("H", 100, data.copy$CROPDMGEXP)
 data.copy$CROPDMGEXP <- gsub("K", 1000, data.copy$CROPDMGEXP)
 data.copy$CROPDMGEXP <- gsub("M", 1000000, data.copy$CROPDMGEXP)
@@ -251,7 +251,8 @@ if (!require("scales")){
 }
 ```
 
-# Plotting the human damage by event
+## Events Most Harmful to Human Health
+```{r plothuman}
 graph.human <- ggplot(data.human, aes(x = cleanev, y = amount, fill = htype)) +
                 geom_bar(stat = "identity") +
                 labs(title = "Average Deaths/Injuries by Event Type",
@@ -260,7 +261,10 @@ graph.human <- ggplot(data.human, aes(x = cleanev, y = amount, fill = htype)) +
                      fill = "Categories") +
                 scale_y_continuous(labels = comma)
 print(graph.human)
+```
 
+## Events with Greatest Economic Consequences
+```{r plotecon}
 graph.econ <- ggplot(data.econ, aes(x = cleanev, y = amount, fill = etype)) +
                 geom_bar(stat = "identity") +
                 labs(title = "Average Economic Damage by Event Type",
@@ -269,3 +273,6 @@ graph.econ <- ggplot(data.econ, aes(x = cleanev, y = amount, fill = etype)) +
                      fill = "Type of Damage") +
                 scale_y_continuous(labels = comma)
 print(graph.econ)
+```
+
+# Conclusion
