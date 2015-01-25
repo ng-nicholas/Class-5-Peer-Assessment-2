@@ -10,11 +10,6 @@ if (!require("data.table")){
     require("data.table")
 }
 
-if (!require("reshape2")){
-    install.packages("data.table")
-    require("data.table")
-}
-
 # Checks if the data has been read into the environment, if not it checks if the
 # file is present for reading. If not present, it downloads the file.
 if (!exists("data.raw")) {
@@ -178,14 +173,12 @@ print("Mutating a new variables to provide a single measure of economic damage."
 # total measure as well.
 data.damage <- data.copy %>%
                 mutate(pdmg = PROPDMG * PROPDMGEXP,
-                       cdmg = CROPDMG * CROPDMGEXP) %>%
+                       cdmg = CROPDMG * CROPDMGEXP,
+                       human = FATALITIES + INJURIES,
+                       econ = pdmg + cdmg) %>%
                 group_by(cleanev) %>%
-                summarise(deaths = round(mean(FATALITIES)),
-                          injuries = round(mean(INJURIES)),
-                          pdmg = mean(pdmg),
-                          cdmg = mean(cdmg)) %>%
-                mutate(human = deaths + injuries,
-                       econ = pdmg + cdmg)
+                summarise(human = round(mean(human)),
+                          econ = mean(econ))
 
 # Grabbing the top 10 human health/econ damage event types and storing them
 # in the relevant tables
@@ -194,19 +187,6 @@ data.human <- subset(data.damage, cleanev %in% data.tophuman[1:10])
 
 data.topecon <- data.damage$cleanev[order(data.damage$econ, decreasing=T)]
 data.econ <- subset(data.damage, cleanev %in% data.topecon[1:10])
-
-# Reshaping damage table into other tables for easier use with ggplot2
-data.human <- melt(data.human, id = "cleanev",
-                   measure = c("deaths", "injuries"), variable.name = "htype",
-                   value.name = "amount")
-data.human$htype <- gsub("deaths", "Deaths", data.human$htype)
-data.human$htype <- gsub("injuries", "Injuries", data.human$htype)
-
-data.econ <- melt(data.econ, id = "cleanev",
-                   measure = c("pdmg", "cdmg"), variable.name = "etype",
-                   value.name = "amount")
-data.econ$etype <- gsub("pdmg", "Property", data.econ$etype)
-data.econ$etype <- gsub("cdmg", "Crop", data.econ$etype)
 
 ## Results
 # Loading ggplot2
@@ -220,20 +200,22 @@ if (!require("scales")){
 }
 
 # Plotting the human damage by event
-graph.human <- ggplot(data.human, aes(x = cleanev, y = amount, fill = htype)) +
+graph.human <- ggplot(data.human, aes(x = cleanev, y = human)) +
                 geom_bar(stat = "identity") +
                 labs(title = "Average Deaths/Injuries by Event Type",
                      x = "Event Type",
-                     y = "Number of Deaths/Injuries",
-                     fill = "Categories") +
+                     y = "Number of Deaths/Injuries") +
                 scale_y_continuous(labels = comma)
+human.event <- subset(data.damage, cleanev %in% data.tophuman[1])$cleanev
+human.total <- subset(data.damage, cleanev %in% data.tophuman[1])$human
 print(graph.human)
 
-graph.econ <- ggplot(data.econ, aes(x = cleanev, y = amount, fill = etype)) +
+graph.econ <- ggplot(data.econ, aes(x = cleanev, y = econ)) +
                 geom_bar(stat = "identity") +
                 labs(title = "Average Economic Damage by Event Type",
                      x = "Event Type",
-                     y = "Cost of Damage (USD)",
-                     fill = "Type of Damage") +
+                     y = "Cost of Damage (USD)") +
                 scale_y_continuous(labels = comma)
+econ.event <- subset(data.damage, cleanev %in% data.topecon[1])$cleanev
+econ.total <- subset(data.damage, cleanev %in% data.topecon[1])$econ
 print(graph.econ)

@@ -1,13 +1,9 @@
 ---
-title: "Class 5 - Peer Assessment 2: Analysis of Effects of Severe Weather Events"
+title: 'Class 5 - Peer Assessment 2: Analysis of Effects of Severe Weather Events'
 author: "Nicholas Ng"
-date: "Friday, January 23, 2015"
-output: html_document
+date: "Sunday, January 25, 2015"
+output: pdf_document
 ---
-
-```{r globaloptions, echo=FALSE}
-opts_chunk$set(cache = T)
-```
 
 # Abstract
 This report is produced as part of the requirements of the 2nd Peer Assessment in the Reproducible Research class of the Data Science Specialisation. Based on the data obtained from the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database, this report identifies the types of weather events that have the greatest effect on:
@@ -16,32 +12,23 @@ This report is produced as part of the requirements of the 2nd Peer Assessment i
 
 # Data Processing
 Before any transformations can be done on the data, the required data processing packages need to be loaded.
-```{r datapacks, echo=FALSE}
-if (!require("dplyr")){
+```{r datapacks}
+if (!suppressMessages(require("dplyr"))){
     install.packages("dplyr")
-    require("dplyr")
+    suppressMessages(require("dplyr"))
 }
 
-if (!require("data.table")){
+if (!suppressMessages(require("data.table"))){
     install.packages("data.table")
-    require("data.table")
-}
-
-if (!require("reshape2")){
-    install.packages("data.table")
-    require("data.table")
+    suppressMessages(require("data.table"))
 }
 ```
 
 As the downloading and reading of the data will take time due to the amount of data, a caching method is used. The code checks if the data has been loaded in the local environment and if the data file has been downloaded. Only if the file has not been downloaded or read into R is the relevant operation executed.
-
-Special note should be taken of the first 2 lines of the `if` loop, which checks for the directory of the script and sets it as the working directory.
-```{r cacheload}
+```{r cacheload, cache=TRUE}
 if (!exists("data.raw")) {
-    
-    script.dir <- paste0(dirname(sys.frame(1)$ofile), "/")
 
-    setwd(script.dir)
+    setwd("./")
 
     data.path <- "./repdata-data-StormData.csv.bz2"
     if (length(list.files(, pattern = "repdata-data-StormData.csv.bz2",
@@ -77,101 +64,101 @@ It should be acknowledged here that the order of the subsetting and the regular 
 ```{r eventsub}
 data.copy$cleanev <- ""
 data.copy$cleanev[grep("astronomical", data.copy$EVTYPE)] <-
-    "Astronomical Low Tide Z"
+    "Astronomical Low Tide"
 data.copy$cleanev[grep("avalan", data.copy$EVTYPE)] <-
-    "Avalanche Z"
+    "Avalanche"
 data.copy$cleanev[grep("blizz", data.copy$EVTYPE)] <-
-    "Blizzard Z"
+    "Blizzard"
 data.copy$cleanev[grep("coast", data.copy$EVTYPE)] <-
-    "Coastal Flood Z"
+    "Coastal Flood"
 data.copy$cleanev[grep("w(i)?nd", data.copy$EVTYPE)] <-
-    "High Wind Z"
+    "High Wind"
 data.copy$cleanev[grep("^cold|^cool", data.copy$EVTYPE)] <-
-    "Cold/Wind Chill Z"
+    "Cold/Wind Chill"
 data.copy$cleanev[grep("debris", data.copy$EVTYPE)] <-
-    "Debris Flow C"
+    "Debris Flow"
 data.copy$cleanev[grep("fog", data.copy$EVTYPE)] <-
-    "Dense Fog Z"
+    "Dense Fog"
 data.copy$cleanev[grep("smoke", data.copy$EVTYPE)] <-
-    "Dense Smoke Z"
+    "Dense Smoke"
 data.copy$cleanev[grep("drought", data.copy$EVTYPE)] <-
-    "Drought Z"
+    "Drought"
 data.copy$cleanev[grep("dustd", data.copy$EVTYPE)] <-
-    "Dust Devil C"
+    "Dust Devil"
 data.copy$cleanev[grep("dustst", data.copy$EVTYPE)] <-
-    "Dust Storm Z"
+    "Dust Storm"
 data.copy$cleanev[grep("heat", data.copy$EVTYPE)] <-
-    "Heat Z"
+    "Heat"
 data.copy$cleanev[grep("excessiveheat|extremeh", data.copy$EVTYPE)] <-
-    "Excessive Heat Z"
+    "Excessive Heat"
 data.copy$cleanev[grep("extremec|extremer|extremew", data.copy$EVTYPE)] <-
-    "Extreme Cold/Wind Chill Z"
+    "Extreme Cold/Wind Chill"
 data.copy$cleanev[grep("flash", data.copy$EVTYPE)] <-
-    "Flash Flood C"
+    "Flash Flood"
 data.copy$cleanev[grep("^flood", data.copy$EVTYPE)] <-
-    "Flood C"
+    "Flood"
 data.copy$cleanev[grep("frost|freez", data.copy$EVTYPE)] <-
-    "Frost/Freeze Z"
+    "Frost/Freeze"
 data.copy$cleanev[grep("funnel", data.copy$EVTYPE)] <-
-    "Funnel Cloud C"
+    "Funnel Cloud"
 data.copy$cleanev[grep("freezingfog", data.copy$EVTYPE)] <-
-    "Freezing Fog Z"
+    "Freezing Fog"
 data.copy$cleanev[grep("hail", data.copy$EVTYPE)] <-
-    "Hail C"
+    "Hail"
 data.copy$cleanev[grep("rain|tstm", data.copy$EVTYPE)] <-
-    "Heavy Rain C"
+    "Heavy Rain"
 data.copy$cleanev[grep("snow", data.copy$EVTYPE)] <-
-    "Heavy Snow Z"
+    "Heavy Snow"
 data.copy$cleanev[grep("surf", data.copy$EVTYPE)] <-
-    "High Surf Z"
+    "High Surf"
 data.copy$cleanev[grep("hurricane|typhoon", data.copy$EVTYPE)] <-
-    "Hurricane (Typhoon) Z"
+    "Hurricane (Typhoon)"
 data.copy$cleanev[grep("icestorm", data.copy$EVTYPE)] <-
-    "Ice Storm Z"
+    "Ice Storm"
 data.copy$cleanev[grep("lakeeffectsnow", data.copy$EVTYPE)] <-
-    "Lake-Effect Snow Z"
+    "Lake-Effect Snow"
 data.copy$cleanev[grep("lake(shore)?flood", data.copy$EVTYPE)] <-
-    "Lakeshore Flood Z"
+    "Lakeshore Flood"
 data.copy$cleanev[grep("lightning", data.copy$EVTYPE)] <-
-    "Lightning C"
+    "Lightning"
 data.copy$cleanev[grep("marinehail", data.copy$EVTYPE)] <-
-    "Marine Hail M"
+    "Marine Hail"
 data.copy$cleanev[grep("marinehighwind", data.copy$EVTYPE)] <-
-    "Marine High Wind M"
+    "Marine High Wind"
 data.copy$cleanev[grep("marinestormwind", data.copy$EVTYPE)] <-
-    "Marine Strong Wind M"
+    "Marine Strong Wind"
 data.copy$cleanev[grep("marinethunderstormwind|marinetstmwind",
-                       data.copy$EVTYPE)] <- "Marine Thunderstorm Wind M"
+                       data.copy$EVTYPE)] <- "Marine Thunderstorm Wind"
 data.copy$cleanev[grep("ripcurrent", data.copy$EVTYPE)] <-
-    "Rip Current Z"
+    "Rip Current"
 data.copy$cleanev[grep("seiche", data.copy$EVTYPE)] <-
-    "Seiche Z"
+    "Seiche"
 data.copy$cleanev[grep("sleet", data.copy$EVTYPE)] <-
-    "Sleet Z"
+    "Sleet"
 data.copy$cleanev[grep("stormsurge", data.copy$EVTYPE)] <-
-    "Storm Surge/Tide Z"
+    "Storm Surge/Tide"
 data.copy$cleanev[grep("strongwind", data.copy$EVTYPE)] <-
-    "Strong Wind Z"
+    "Strong Wind"
 data.copy$cleanev[grep("storm(.*)?wind|tstmw", data.copy$EVTYPE)] <-
-    "Thunderstorm Wind C"
+    "Thunderstorm Wind"
 data.copy$cleanev[grep("tornado", data.copy$EVTYPE)] <-
-    "Tornado C"
+    "Tornado"
 data.copy$cleanev[grep("tropicaldepression", data.copy$EVTYPE)] <-
-    "Tropical Depression Z"
+    "Tropical Depression"
 data.copy$cleanev[grep("tropicalstorm", data.copy$EVTYPE)] <-
-    "Tropical Storm Z"
+    "Tropical Storm"
 data.copy$cleanev[grep("tsunami", data.copy$EVTYPE)] <-
-    "Tsunami Z"
+    "Tsunami"
 data.copy$cleanev[grep("volcanic", data.copy$EVTYPE)] <-
-    "Volcanic Ash Z"
+    "Volcanic Ash"
 data.copy$cleanev[grep("wa.erspout", data.copy$EVTYPE)] <-
-    "Waterspout M"
+    "Waterspout"
 data.copy$cleanev[grep("wild(.*)?fire", data.copy$EVTYPE)] <-
-    "Wildfire Z"
+    "Wildfire"
 data.copy$cleanev[grep("wint", data.copy$EVTYPE)] <-
-    "Winter Weather Z"
+    "Winter Weather"
 data.copy$cleanev[grep("winterst", data.copy$EVTYPE)] <-
-    "Winter Storm Z"
+    "Winter Storm"
 data.copy$cleanev[grep("^$|^[[:space:]]$", data.copy$cleanev)] <- "Other"
 ```
 
@@ -188,7 +175,7 @@ data.copy$CROPDMGEXP <- gsub("[[:digit:]]|[[:punct:]]", "",
                              data.copy$CROPDMGEXP)
 ```
 
-Once the "exponent" columns have been cleaned, the letters are substituted with the factors they represent for easier multiplication after they are coerced to numeric type. Here, it is assumed that "H" represents a factor of 100, and blanks represent a factor
+Once the "exponent" columns have been cleaned, the letters are substituted with the factors they represent for easier multiplication after they are coerced to numeric type. Here, it is assumed that "H" represents a factor of 100, and blanks represent a factor of 1.
 ```{r expsub}
 data.copy$PROPDMGEXP <- gsub("^$", 1, data.copy$PROPDMGEXP)
 data.copy$PROPDMGEXP <- gsub("H", 100, data.copy$PROPDMGEXP)
@@ -206,73 +193,79 @@ data.copy$PROPDMGEXP <- as.numeric(data.copy$PROPDMGEXP)
 data.copy$CROPDMGEXP <- as.numeric(data.copy$CROPDMGEXP)
 ```
 
+## Ranking and Summary
+Once the data has been suitably cleaned, it can be summarised to obtain averaged measures of the deaths/injuries and economic damage by event type. The data is first mutated to produce fully quantitative measures of economic damage, then is summarised by averaging each measure by event type. Lastly a final mutation is done to obtain the totals of each type of measure (human health hazards, economic damage), for use later in ranking.
 ```{r summary}
 data.damage <- data.copy %>%
                 mutate(pdmg = PROPDMG * PROPDMGEXP,
-                       cdmg = CROPDMG * CROPDMGEXP) %>%
+                       cdmg = CROPDMG * CROPDMGEXP,
+                       human = FATALITIES + INJURIES,
+                       econ = pdmg + cdmg) %>%
                 group_by(cleanev) %>%
-                summarise(deaths = round(mean(FATALITIES)),
-                          injuries = round(mean(INJURIES)),
-                          pdmg = mean(pdmg),
-                          cdmg = mean(cdmg)) %>%
-                mutate(human = deaths + injuries,
-                       econ = pdmg + cdmg)
+                summarise(human = round(mean(human)),
+                          econ = mean(econ))
 ```
 
+As there are 48 types of events, it is likely that the plots will be very cluttered with such highly dimensional data. Therefore, the following code seeks to only identify the top 10 event types based on the hazards to human health and economic damage respectively.
 ```{r rankset}
-data.tophuman <- data.damage$cleanev[order(data.damage$human, decreasing=T)]
-data.human <- subset(data.damage, cleanev %in% data.tophuman[1:10])
+data.human <- data.damage[order(data.damage$human, decreasing=T)][1:10]
 
-data.topecon <- data.damage$cleanev[order(data.damage$econ, decreasing=T)]
-data.econ <- subset(data.damage, cleanev %in% data.topecon[1:10])
-
-data.human <- melt(data.human, id = "cleanev",
-                   measure = c("deaths", "injuries"), variable.name = "htype",
-                   value.name = "amount")
-data.human$htype <- gsub("deaths", "Deaths", data.human$htype)
-data.human$htype <- gsub("injuries", "Injuries", data.human$htype)
-
-data.econ <- melt(data.econ, id = "cleanev",
-                   measure = c("pdmg", "cdmg"), variable.name = "etype",
-                   value.name = "amount")
-data.econ$etype <- gsub("pdmg", "Property", data.econ$etype)
-data.econ$etype <- gsub("cdmg", "Crop", data.econ$etype)
+data.econ <- data.damage[order(data.damage$econ, decreasing=T)][1:10]
 ```
 
 # Results
-```{r plotpacks, echo=FALSE}
-if (!require("ggplot2")){
+To display the results neatly, the `ggplot2` and `scales` packages are required.
+```{r plotpacks}
+if (!suppressMessages(require("ggplot2"))){
     install.packages("ggplot2")
-    require("ggplot2")
+    suppressMessages(require("ggplot2"))
 }
-if (!require("scales")){
+if (!suppressMessages(require("scales"))){
     install.packages("scales")
-    require("scales")
+    suppressMessages(require("scales"))
 }
 ```
 
 ## Events Most Harmful to Human Health
-```{r plothuman}
-graph.human <- ggplot(data.human, aes(x = cleanev, y = amount, fill = htype)) +
+The following code creates a plot of the top 10 events most harmful to human health with bars representing the average deaths/injuries per event.
+```{r plothuman, fig.width=10, fig.height=5}
+graph.human <- ggplot(data.human, aes(x = gsub("[[:space:]]", "\n", cleanev), 
+                                      y = human)) +
                 geom_bar(stat = "identity") +
                 labs(title = "Average Deaths/Injuries by Event Type",
                      x = "Event Type",
-                     y = "Number of Deaths/Injuries",
-                     fill = "Categories") +
+                     y = "Number of Deaths/Injuries") +
                 scale_y_continuous(labels = comma)
 print(graph.human)
 ```
+  
+As seen in the plot above, the events that pose the greatest threat to human health are `r data.human$cleanev[1]`, with an average of `r data.human$human[1]` deaths/injuries per event.
 
 ## Events with Greatest Economic Consequences
-```{r plotecon}
-graph.econ <- ggplot(data.econ, aes(x = cleanev, y = amount, fill = etype)) +
+The following code creates a plot of the top 10 events causing the most economic damage with bars representing the average economic damage per event.
+```{r plotecon, fig.width=10, fig.height=5}
+graph.econ <- ggplot(data.econ, aes(x = gsub("[[:space:]]", "\n", cleanev), 
+                                    y = econ)) +
                 geom_bar(stat = "identity") +
                 labs(title = "Average Economic Damage by Event Type",
                      x = "Event Type",
-                     y = "Cost of Damage (USD)",
-                     fill = "Type of Damage") +
+                     y = "Cost of Damage (USD)") +
                 scale_y_continuous(labels = comma)
 print(graph.econ)
 ```
+  
+As seen in the plot above, the events that cause the greatest economic damage are `r data.econ$cleanev[1]`, with an average of approximately `r format(round(data.econ$econ[1]), scientific = F, digits = 0, big.mark = ",")` USD worth of damage per event.
 
 # Conclusion
+In terms of the threat to human health, it can be seen that most events to do not pose much a threat, given an average of only 1 - 2 deaths/injuries per event. However, the economic consequences can vary greatly from event to event. It is not clear if the the economic consequences for other events are as significant as `r data.econ$cleanev[1]` from the plot, however, it can be studied in greater detail with the full averaged data in `data.damage` included in the appendix.
+
+# Appendix - data.damage data
+```{r apppack}
+if (!suppressMessages(require("xtable"))){
+    install.packages("xtable")
+    suppressMessages(require("xtable"))
+}
+```
+```{r datapresent, results='asis'}
+print(xtable(data.damage), comment = F, include.rownames = F)
+```
